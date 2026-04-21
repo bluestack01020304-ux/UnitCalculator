@@ -1,4 +1,5 @@
 import sys
+import random
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
@@ -6,22 +7,23 @@ from PyQt5.QtGui import QColor
 class ExamScoreUI(QWidget):
     def __init__(self):
         super().__init__()
+        # 테스트용 100명 데이터 생성 (평균 점수 비교용)
+        self.other_students = [random.randint(40, 100) for _ in range(100)]
         self.initUI()
 
     def initUI(self):
-        # 화면 크기 설정 (과목별 등급 칸 때문에 가로를 넓게 설정)
-        self.setWindowTitle('성적 관리 시스템 UI')
-        self.resize(1200, 600)
+        self.setWindowTitle('성적 관리 시스템')
+        self.resize(1200, 750)
 
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
 
-        # 제목
+        # 1. 제목
         title = QLabel("기말고사 성적 결과표")
-        title.setStyleSheet("font-size: 25px; font-weight: bold; margin: 10px;")
+        title.setStyleSheet("font-size: 25px; font-weight: bold; margin: 15px;")
         title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        main_layout.addWidget(title)
 
-        # 표 설정: 과목(5) + 각 등급(5) + 평균(1) + 석차(1) = 총 12열
+        # 2. 표 설정 (굵은 줄 제거, 총 12열)
         self.table = QTableWidget()
         self.table.setColumnCount(12)
         headers = [
@@ -30,64 +32,116 @@ class ExamScoreUI(QWidget):
         ]
         self.table.setHorizontalHeaderLabels(headers)
         
-        # 엑셀처럼 칸을 꽉 채우기
+        # 모든 칸을 균등하게 배분
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        layout.addWidget(self.table)
+        main_layout.addWidget(self.table)
 
-        self.setLayout(layout)
+        # 3. 입력 구역
+        input_group = QGroupBox("성적 입력")
+        input_layout = QHBoxLayout()
+
+        self.inputs = []
+        subjects = ['국어', '수학', '영어', '사회', '과학']
+        
+        for sub in subjects:
+            vbox = QVBoxLayout()
+            label = QLabel(sub)
+            label.setAlignment(Qt.AlignCenter)
+            edit = QLineEdit()
+            edit.setPlaceholderText("점수")
+            edit.setAlignment(Qt.AlignCenter)
+            vbox.addWidget(label)
+            vbox.addWidget(edit)
+            input_layout.addLayout(vbox)
+            self.inputs.append(edit)
+
+        input_group.setLayout(input_layout)
+        main_layout.addWidget(input_group)
+
+        # 4. 버튼 구역 (오른쪽 정렬)
+        button_layout = QHBoxLayout()
+        self.confirm_btn = QPushButton("평균/등급/석차 확인 및 표 추가")
+        self.confirm_btn.setFixedSize(300, 50)
+        self.confirm_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2E7D32; 
+                color: white; 
+                font-weight: bold; 
+                font-size: 14px; 
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #388E3C;
+            }
+        """)
+        self.confirm_btn.clicked.connect(self.process_scores)
+
+        button_layout.addStretch(1)
+        button_layout.addWidget(self.confirm_btn)
+        main_layout.addLayout(button_layout)
+
+        self.setLayout(main_layout)
 
     def get_grade(self, score):
-        """과목별 점수에 따른 등급 판정"""
         if score >= 90: return 'A'
         elif score >= 80: return 'B'
         elif score >= 70: return 'C'
         else: return 'D'
 
+    def calculate_rank(self, my_avg):
+        rank = 1
+        for other_avg in self.other_students:
+            if other_avg > my_avg:
+                rank += 1
+        return rank
+
+    def process_scores(self):
+        try:
+            scores = []
+            for edit in self.inputs:
+                val = edit.text()
+                scores.append(int(val if val else 0))
+
+            avg = sum(scores) / len(scores)
+            rank = self.calculate_rank(avg)
+            
+            # 표에 데이터 추가
+            self.update_table(scores, round(avg, 2), f"{rank} / 101")
+            
+            # 입력창 초기화
+            for edit in self.inputs:
+                edit.clear()
+
+        except ValueError:
+            QMessageBox.warning(self, "입력 오류", "숫자만 입력해주세요.")
+
     def update_table(self, scores, average, rank):
-        """
-        외부에서 계산된 값을 받아 표에 추가하는 함수
-        scores: [국어, 수학, 영어, 사회, 과학] 리스트
-        average: 계산된 평균값
-        rank: 계산된 석차
-        """
         row = self.table.rowCount()
         self.table.insertRow(row)
 
         col_idx = 0
-        # 0번부터 4번까지 과목 점수와 등급을 세트로 입력
         for i in range(5):
-            # 점수 칸
-            score_item = QTableWidgetItem(str(scores[i]))
-            score_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(row, col_idx, score_item)
+            # 점수 입력
+            self.table.setItem(row, col_idx, self.make_item(str(scores[i])))
             
-            # 등급 칸 (배경색을 넣어 구분)
-            grade_val = self.get_grade(scores[i])
-            grade_item = QTableWidgetItem(grade_val)
-            grade_item.setTextAlignment(Qt.AlignCenter)
-            grade_item.setBackground(QColor(245, 245, 245)) 
+            # 등급 입력 (배경색을 좀 더 진한 회색으로 변경)
+            grade_item = self.make_item(self.get_grade(scores[i]))
+            grade_item.setBackground(QColor(220, 220, 220)) # 기존 245 -> 220으로 진하게 변경
             self.table.setItem(row, col_idx + 1, grade_item)
             
-            col_idx += 2 # 점수+등급 다음 칸으로 이동
+            col_idx += 2 
 
-        # 평균과 석차 입력
-        avg_item = QTableWidgetItem(str(average))
-        avg_item.setTextAlignment(Qt.AlignCenter)
-        self.table.setItem(row, 10, avg_item)
+        # 평균과 석차
+        self.table.setItem(row, 10, self.make_item(str(average)))
+        self.table.setItem(row, 11, self.make_item(str(rank)))
 
-        rank_item = QTableWidgetItem(str(rank))
-        rank_item.setTextAlignment(Qt.AlignCenter)
-        self.table.setItem(row, 11, rank_item)
+    def make_item(self, text):
+        item = QTableWidgetItem(text)
+        item.setTextAlignment(Qt.AlignCenter)
+        return item
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = ExamScoreUI()
     window.show()
-    
-    
-   
-
-
     sys.exit(app.exec_())
-
-    
