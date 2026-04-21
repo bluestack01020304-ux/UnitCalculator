@@ -8,22 +8,33 @@ def avg(score: list) -> int:
 
     return sum(score)//len(score)
 
-def grade(score: list) -> list:
-    """유저의 각 점수 별 등급을 구하는 함수"""
-    for i in range(len(score)):
-        if score[i]>90: score[i] = "A"
-        elif score[i]>80: score[i] = "B"
-        elif score[i]>70: score[i] = "C"
-        elif score[i]>60: score[i] = "D"
-        else: score[i] = "F"
+def grade(score: list[int]) -> list[str]:
 
-    return score
+    result = []
 
-def ranking(score: list):
-    """유저의 각 석차를 구하는 함수"""
+    for s in score:
+        if s > 90: result.append("A")
+        elif s > 80: result.append("B")
+        elif s > 70: result.append("C")
+        elif s > 60: result.append("D")
+        elif s > 50: result.append("E")
+        else: result.append("F")
 
-    noTost = {"국어": 0, "수학": 1, "영어": 2, "사회": 3, "과학": 4}
-    all = []
-    for i in config.scores:
-        for j, k in i.items():
-            all[j] += k
+    return result
+
+def ranking(score: list[int]):
+
+    subjects = list(zip(*config.scores))
+    ranks = []
+
+    for i, subject in enumerate(subjects):
+
+        rank = 1
+        for s in subject:
+            if s > score[i]:
+                rank += 1
+
+        ranks.append(rank)
+
+    return ranks
+        
