@@ -60,7 +60,7 @@ class ExamScoreUI(QWidget):
 
         # 4. 버튼 구역 (오른쪽 정렬)
         button_layout = QHBoxLayout()
-        self.confirm_btn = QPushButton("평균/등급/석차 확인 및 표 추가")
+        self.confirm_btn = QPushButton("확인")
         self.confirm_btn.setFixedSize(300, 50)
         self.confirm_btn.setStyleSheet("""
             QPushButton {
@@ -86,7 +86,8 @@ class ExamScoreUI(QWidget):
         if score >= 90: return 'A'
         elif score >= 80: return 'B'
         elif score >= 70: return 'C'
-        else: return 'D'
+        elif score >= 60: return 'D'
+        else: return 'E'
 
     def calculate_rank(self, my_avg):
         rank = 1
