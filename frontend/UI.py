@@ -1,34 +1,32 @@
 import sys
-import random
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 
 import backend.config as config
+import Utillity.Math as Math
 
 
 class ExamScoreUI(QWidget):
+
     def __init__(self):
         super().__init__()
-
-        # 테스트용 100명 데이터 (평균 비교용)
-        self.other_students = config.scores
 
         self.initUI()
 
     def initUI(self):
+
         self.setWindowTitle('성적 관리 시스템')
         self.resize(1200, 750)
 
         main_layout = QVBoxLayout()
 
-        # 제목
         title = QLabel("기말고사 성적 결과표")
         title.setStyleSheet("font-size: 25px; font-weight: bold; margin: 15px;")
         title.setAlignment(Qt.AlignCenter)
+
         main_layout.addWidget(title)
 
-        # 표
         self.table = QTableWidget()
         self.table.setColumnCount(12)
 
@@ -54,6 +52,7 @@ class ExamScoreUI(QWidget):
         subjects = ['국어', '수학', '영어', '사회', '과학']
 
         for sub in subjects:
+
             vbox = QVBoxLayout()
 
             label = QLabel(sub)
@@ -67,6 +66,7 @@ class ExamScoreUI(QWidget):
             vbox.addWidget(edit)
 
             input_layout.addLayout(vbox)
+
             self.inputs.append(edit)
 
         input_group.setLayout(input_layout)
@@ -78,19 +78,6 @@ class ExamScoreUI(QWidget):
         self.confirm_btn = QPushButton("확인")
         self.confirm_btn.setFixedSize(300, 50)
 
-        self.confirm_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2E7D32;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #388E3C;
-            }
-        """)
-
         self.confirm_btn.clicked.connect(self.process_scores)
 
         button_layout.addStretch(1)
@@ -99,29 +86,6 @@ class ExamScoreUI(QWidget):
         main_layout.addLayout(button_layout)
 
         self.setLayout(main_layout)
-
-    def get_grade(self, score):
-
-        if score >= 90:
-            return 'A'
-        elif score >= 80:
-            return 'B'
-        elif score >= 70:
-            return 'C'
-        elif score >= 60:
-            return 'D'
-        else:
-            return 'E'
-
-    def calculate_rank(self, my_avg):
-
-        rank = 1
-
-        for other_avg in self.other_students:
-            if other_avg > my_avg:
-                rank += 1
-
-        return rank
 
     def process_scores(self):
 
@@ -138,11 +102,12 @@ class ExamScoreUI(QWidget):
                 else:
                     scores.append(int(val))
 
-            avg = sum(scores) / len(scores)
-
-            rank = self.calculate_rank(avg)
-
-            self.update_table(scores, round(avg, 2), f"{rank} / 101")
+            # Math 모듈 사용
+            print(scores)
+            avg = Math.avg(scores)
+            grades = Math.grade(scores)
+            ranks = Math.ranking(scores)
+            self.update_table(scores, grades, avg, ranks)
 
             for edit in self.inputs:
                 edit.clear()
@@ -150,7 +115,7 @@ class ExamScoreUI(QWidget):
         except ValueError:
             QMessageBox.warning(self, "입력 오류", "숫자만 입력해주세요.")
 
-    def update_table(self, scores, average, rank):
+    def update_table(self, scores, grades, average, ranks):
 
         row = self.table.rowCount()
 
@@ -162,7 +127,7 @@ class ExamScoreUI(QWidget):
 
             self.table.setItem(row, col_idx, self.make_item(str(scores[i])))
 
-            grade_item = self.make_item(self.get_grade(scores[i]))
+            grade_item = self.make_item(grades[i])
             grade_item.setBackground(QColor(220, 220, 220))
 
             self.table.setItem(row, col_idx + 1, grade_item)
@@ -170,7 +135,11 @@ class ExamScoreUI(QWidget):
             col_idx += 2
 
         self.table.setItem(row, 10, self.make_item(str(average)))
-        self.table.setItem(row, 11, self.make_item(str(rank)))
+
+        # 석차는 과목별이라 문자열로 합쳐서 표시
+        rank_text = ", ".join(map(str, ranks))
+
+        self.table.setItem(row, 11, self.make_item(rank_text))
 
     def make_item(self, text):
 
@@ -190,3 +159,4 @@ def run():
     window.show()
 
     sys.exit(app.exec_())
+    
